@@ -1,10 +1,11 @@
 #include "sparse_matrix.h"
 #include <vector>
 
+using namespace std;
+
 SparseMatrix::SparseMatrix() : rowList(nullptr), colList(nullptr) {}
 
 SparseMatrix::~SparseMatrix() {
-    // Liberar todos los nodos recorriendo por filas
     RowHeader* rh = rowList;
     while (rh) {
         Cell* cell = rh->first;
@@ -17,7 +18,6 @@ SparseMatrix::~SparseMatrix() {
         delete rh;
         rh = nextRh;
     }
-    // Liberar cabeceras de columna (celdas ya liberadas)
     ColHeader* ch = colList;
     while (ch) {
         ColHeader* next = ch->next;
@@ -26,7 +26,6 @@ SparseMatrix::~SparseMatrix() {
     }
 }
 
-// Busca la cabecera de fila. Retorna nullptr si no existe.
 RowHeader* SparseMatrix::findRowHeader(int row) const {
     RowHeader* rh = rowList;
     while (rh && rh->row < row) rh = rh->next;
@@ -34,7 +33,6 @@ RowHeader* SparseMatrix::findRowHeader(int row) const {
     return nullptr;
 }
 
-// Busca la cabecera de columna. Retorna nullptr si no existe.
 ColHeader* SparseMatrix::findColHeader(int col) const {
     ColHeader* ch = colList;
     while (ch && ch->col < col) ch = ch->next;
@@ -42,7 +40,6 @@ ColHeader* SparseMatrix::findColHeader(int col) const {
     return nullptr;
 }
 
-// Obtiene o crea una cabecera de fila, insertando en orden.
 RowHeader* SparseMatrix::getOrCreateRowHeader(int row) {
     if (!rowList || rowList->row > row) {
         RowHeader* rh = new RowHeader(row);
@@ -50,6 +47,8 @@ RowHeader* SparseMatrix::getOrCreateRowHeader(int row) {
         rowList = rh;
         return rh;
     }
+    if (rowList->row == row) return rowList; 
+
     RowHeader* curr = rowList;
     while (curr->next && curr->next->row < row) curr = curr->next;
     if (curr->next && curr->next->row == row) return curr->next;
@@ -59,7 +58,6 @@ RowHeader* SparseMatrix::getOrCreateRowHeader(int row) {
     return rh;
 }
 
-// Igual pero para columnas.
 ColHeader* SparseMatrix::getOrCreateColHeader(int col) {
     if (!colList || colList->col > col) {
         ColHeader* ch = new ColHeader(col);
@@ -67,6 +65,8 @@ ColHeader* SparseMatrix::getOrCreateColHeader(int col) {
         colList = ch;
         return ch;
     }
+    if (colList->col == col) return colList;
+
     ColHeader* curr = colList;
     while (curr->next && curr->next->col < col) curr = curr->next;
     if (curr->next && curr->next->col == col) return curr->next;
@@ -75,30 +75,40 @@ ColHeader* SparseMatrix::getOrCreateColHeader(int col) {
     curr->next = ch;
     return ch;
 }
-
 void SparseMatrix::removeRowHeaderIfEmpty(RowHeader* rh) {
     if (!rh || rh->first) return;
     if (rowList == rh) { rowList = rh->next; delete rh; return; }
+    
     RowHeader* prev = rowList;
-    while (prev->next != rh) prev = prev->next;
-    prev->next = rh->next;
-    delete rh;
+    while (prev->next != nullptr && prev->next != rh) {
+        prev = prev->next;
+    }
+    
+    if (prev->next != nullptr) {
+        prev->next = rh->next;
+        delete rh;
+    }
 }
 
 void SparseMatrix::removeColHeaderIfEmpty(ColHeader* ch) {
     if (!ch || ch->first) return;
     if (colList == ch) { colList = ch->next; delete ch; return; }
+    
     ColHeader* prev = colList;
-    while (prev->next != ch) prev = prev->next;
-    prev->next = ch->next;
-    delete ch;
+    while (prev->next != nullptr && prev->next != ch) {
+        prev = prev->next;
+    }
+    
+    if (prev->next != nullptr) {
+        prev->next = ch->next;
+        delete ch;
+    }
 }
 
-// INSERTAR/ACTUALIZAR celda. Complejidad: O(k) donde k = celdas en fila/columna
-void SparseMatrix::insertCell(int row, int col, const std::string& value) {
+// INSERTAR/ACTUALIZAR celda
+void SparseMatrix::insertCell(int row, int col, const string& value) {
     if (value.empty()) { deleteCell(row, col); return; }
 
-    // ¿Ya existe? Solo actualiza el valor, sin crear nodo nuevo.
     RowHeader* existingRh = findRowHeader(row);
     if (existingRh) {
         Cell* c = existingRh->first;
@@ -106,10 +116,8 @@ void SparseMatrix::insertCell(int row, int col, const std::string& value) {
         if (c && c->col == col) { c->value = value; return; }
     }
 
-    // Crear nuevo nodo
     Cell* newCell = new Cell(row, col, value);
 
-    // Insertar en lista de fila (ordenado por columna)
     RowHeader* rowHdr = getOrCreateRowHeader(row);
     if (!rowHdr->first || rowHdr->first->col > col) {
         newCell->nextInRow = rowHdr->first;
@@ -122,7 +130,6 @@ void SparseMatrix::insertCell(int row, int col, const std::string& value) {
         curr->nextInRow = newCell;
     }
 
-    // Insertar en lista de columna (ordenado por fila)
     ColHeader* colHdr = getOrCreateColHeader(col);
     if (!colHdr->first || colHdr->first->row > row) {
         newCell->nextInCol = colHdr->first;
@@ -136,8 +143,8 @@ void SparseMatrix::insertCell(int row, int col, const std::string& value) {
     }
 }
 
-// CONSULTAR celda. Devuelve "" si no existe (nunca crash). O(k)
-std::string SparseMatrix::queryCell(int row, int col) const {
+// CONSULTAR celda
+string SparseMatrix::queryCell(int row, int col) const {
     RowHeader* rh = findRowHeader(row);
     if (!rh) return "";
     Cell* c = rh->first;
@@ -146,18 +153,16 @@ std::string SparseMatrix::queryCell(int row, int col) const {
     return "";
 }
 
-// MODIFICAR: upsert (inserta si no existe, actualiza si existe)
-void SparseMatrix::modifyCell(int row, int col, const std::string& value) {
+// MODIFICAR celda
+void SparseMatrix::modifyCell(int row, int col, const string& value) {
     insertCell(row, col, value);
 }
 
-// ELIMINAR celda. Ajusta punteros en AMBAS listas. O(k)
-// Esta es la operación más delicada — presta atención a los punteros.
+// ELIMINAR celda
 void SparseMatrix::deleteCell(int row, int col) {
     RowHeader* rh = findRowHeader(row);
-    if (!rh) return; // celda no existe → no crashear
+    if (!rh) return;
 
-    // Encontrar y desenlazar de la lista de fila
     Cell* target = nullptr;
     if (rh->first && rh->first->col == col) {
         target = rh->first;
@@ -166,12 +171,11 @@ void SparseMatrix::deleteCell(int row, int col) {
         Cell* prev = rh->first;
         while (prev && prev->nextInRow && prev->nextInRow->col != col)
             prev = prev->nextInRow;
-        if (!prev || !prev->nextInRow) return; // no existe
+        if (!prev || !prev->nextInRow) return;
         target = prev->nextInRow;
         prev->nextInRow = target->nextInRow;
     }
 
-    // Desenlazar de la lista de columna
     ColHeader* ch = findColHeader(col);
     if (ch) {
         if (ch->first == target) {
@@ -189,15 +193,14 @@ void SparseMatrix::deleteCell(int row, int col) {
     delete target;
 }
 
-// ELIMINAR FILA: recorre la fila y elimina cada celda de sus columnas. O(k)
+// ELIMINAR FILA
 void SparseMatrix::deleteRow(int row) {
     RowHeader* rh = findRowHeader(row);
-    if (!rh) return; // fila vacía → no crashear
+    if (!rh) return;
 
     Cell* cell = rh->first;
     while (cell) {
         Cell* next = cell->nextInRow;
-        // Desenlazar de columna
         ColHeader* ch = findColHeader(cell->col);
         if (ch) {
             if (ch->first == cell) {
@@ -213,7 +216,6 @@ void SparseMatrix::deleteRow(int row) {
         cell = next;
     }
 
-    // Eliminar cabecera de fila
     if (rowList == rh) {
         rowList = rh->next;
     } else {
@@ -224,7 +226,7 @@ void SparseMatrix::deleteRow(int row) {
     delete rh;
 }
 
-// ELIMINAR COLUMNA: análogo a deleteRow. O(k)
+// ELIMINAR COLUMNA
 void SparseMatrix::deleteCol(int col) {
     ColHeader* ch = findColHeader(col);
     if (!ch) return;
@@ -257,10 +259,9 @@ void SparseMatrix::deleteCol(int col) {
     delete ch;
 }
 
-// ELIMINAR RANGO rectangular. O(k*m) donde k,m = celdas en el rango.
+// ELIMINAR RANGO
 void SparseMatrix::deleteRange(int r1, int c1, int r2, int c2) {
-    // Recolectar coordenadas primero para no modificar mientras iteramos
-    std::vector<std::pair<int,int>> toDelete;
+    vector<pair<int,int>> toDelete;
     RowHeader* rh = rowList;
     while (rh) {
         if (rh->row >= r1 && rh->row <= r2) {

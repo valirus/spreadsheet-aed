@@ -2,12 +2,13 @@
 #include "cell.h"
 #include <string>
 
+using namespace std;
+
 class SparseMatrix {
 private:
-    RowHeader* rowList;   // lista enlazada de cabeceras de fila (ordenada)
-    ColHeader* colList;   // lista enlazada de cabeceras de columna (ordenada)
+    RowHeader* rowList;
+    ColHeader* colList;
 
-    // Helpers internos
     RowHeader* findRowHeader(int row) const;
     ColHeader* findColHeader(int col) const;
     RowHeader* getOrCreateRowHeader(int row);
@@ -19,14 +20,13 @@ public:
     SparseMatrix();
     ~SparseMatrix();
 
+
+    SparseMatrix(const SparseMatrix&) = delete;
+    SparseMatrix& operator=(const SparseMatrix&) = delete;
     // --- Operaciones básicas de celda ---
-    // Insertar/actualizar: si ya existe, modifica. Si no, crea nodo. O(k)
-    void insertCell(int row, int col, const std::string& value);
-    // Consultar: devuelve "" si no existe. O(k)
-    std::string queryCell(int row, int col) const;
-    // Modificar (alias de insert con nodo existente)
-    void modifyCell(int row, int col, const std::string& value);
-    // Eliminar: ajusta punteros en fila Y columna. O(k)
+    void insertCell(int row, int col, const string& value);
+    string queryCell(int row, int col) const;
+    void modifyCell(int row, int col, const string& value);
     void deleteCell(int row, int col);
 
     // --- Operaciones sobre filas/columnas/rangos ---

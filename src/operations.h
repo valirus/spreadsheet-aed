@@ -3,6 +3,8 @@
 #include <string>
 #include <optional>
 #include <utility>
+#include <unordered_set>
+
 
 using namespace std;
 
@@ -20,8 +22,9 @@ public:
     static optional<double> maxRange(const SparseMatrix& sm, int r1, int c1, int r2, int c2);
     static optional<double> minRange(const SparseMatrix& sm, int r1, int c1, int r2, int c2);
 
+    
     // --- Fórmulas ---
-    static string evaluateFormula(const SparseMatrix& sm, const string& formula);
+    static string evaluateFormula(const SparseMatrix& sm, const string& formula, int depth = 0);
 
     // Helpers
     static bool isNumeric(const string& s);
