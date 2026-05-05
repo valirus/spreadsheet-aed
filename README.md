@@ -16,3 +16,5 @@ Para compilar y ejecutar este proyecto en Linux (o WSL), asegúrese de tener ins
 ```bash
 sudo apt update
 sudo apt install g++ make libsfml-dev
+make
+./spreadsheet
